@@ -90,7 +90,7 @@ def create_camera_frustum(pos, rot=np.eye(3), img_w=640, img_h=480, fov_deg=60, 
     return frustum
 
 
-def create_visualization_lines(image, camera: Camera, threshold=128, ray_length=10000):
+def create_visualization_lines(image, camera: Camera, threshold=10, ray_length=10000):
     image_height, image_width = image.shape
     focal_length = (image_width / 2) / np.tan(np.deg2rad(camera.fov) / 2)
 
