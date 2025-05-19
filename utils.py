@@ -9,7 +9,7 @@ class Camera:
         # camera fov
         self.fov = fov
         # rotation in degrees [x, y, z]
-        self.rotation = rotation
+        self.rotation = np.radians(rotation)
 
 
 def get_rotation_matrix(x_deg, y_deg, z_deg):
@@ -91,34 +91,69 @@ def create_camera_frustum(pos, rot=np.eye(3), img_w=640, img_h=480, fov_deg=60, 
 
 
 def create_visualization_lines(image, camera: Camera, threshold=10, ray_length=10000):
-    image_height, image_width = image.shape
-    focal_length = (image_width / 2) / np.tan(np.deg2rad(camera.fov) / 2)
+    h, w = image.shape
+
+    # Convert rotation (Euler XYZ) to rotation matrix
+    def euler_to_rotation_matrix(rx, ry, rz):
+        # Rx
+        Rx = np.array([
+            [1, 0, 0],
+            [0, np.cos(rx), -np.sin(rx)],
+            [0, np.sin(rx), np.cos(rx)]
+        ])
+        # Ry
+        Ry = np.array([
+            [np.cos(ry), 0, np.sin(ry)],
+            [0, 1, 0],
+            [-np.sin(ry), 0, np.cos(ry)]
+        ])
+        # Rz
+        Rz = np.array([
+            [np.cos(rz), -np.sin(rz), 0],
+            [np.sin(rz), np.cos(rz), 0],
+            [0, 0, 1]
+        ])
+        return Rz @ Ry @ Rx  # Note: Unity uses left-handed system. Adjust if necessary.
+
+    R = euler_to_rotation_matrix(*camera.rotation)
+
+    # Get focal length from FOV (horizontal fov)
+    fx = fy = (w / 2) / np.tan(np.radians(camera.fov) / 2)
+
+    # Image center
+    cx, cy = w / 2, h / 2
 
     points = []
+    lines = []
     colors = []
 
-    for v in range(image_height):
-        for u in range(image_width):
-            if image[v, u] > threshold:
-                # Camera space
-                x = (u - image_width / 2)
-                y = -(v - image_height / 2)
-                z = focal_length
-                dir_cam = np.array([x, y, z])
-                dir_cam = dir_cam / np.linalg.norm(dir_cam)
+    index = 0
+    for y in range(h):
+        for x in range(w):
+            intensity = image[y, x]
+            if intensity < threshold:
+                continue
 
-                # World space
-                dir_world = get_rotation_matrix(*camera.rotation) @ dir_cam
-                end_point = camera.position + dir_world * ray_length
+            # From pixel to camera space
+            dx = (x - cx) / fx
+            dy = (y - cy) / fy
+            dz = 1.0
+            dir_cam = np.array([dx, -dy, dz])
+            dir_cam /= np.linalg.norm(dir_cam)
 
-                points.append(camera.position)
-                points.append(end_point)
+            # Rotate to world space
+            dir_world = R @ dir_cam
 
-    lines = [[i, i + 1] for i in range(0, len(points), 2)]
+            start = camera.position
+            end = start + dir_world * ray_length
 
-    line_set = o3d.geometry.LineSet()
-    line_set.points = o3d.utility.Vector3dVector(points)
-    line_set.lines = o3d.utility.Vector2iVector(lines)
-    line_set.colors = o3d.utility.Vector3dVector(colors)
+            points.append(start)
+            points.append(end)
+            lines.append([index, index + 1])
+            colors.append([1, 0, 0])  # Red rays
+            index += 2
 
-    return line_set
+    # Create LineSet
+    return o3d.geometry.LineSet(points=o3d.utility.Vector3dVector(points), lines=o3d.utility.Vector2iVector(lines))
+
+
