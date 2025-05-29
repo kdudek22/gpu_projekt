@@ -26,12 +26,12 @@ if __name__ == "__main__":
 
     joined_camera_data = np.array(camera_1_data + camera_2_data).astype(np.int32)
 
-    width, height = image_1.shape
+    height, width = image_1.shape
 
-    joined_images = np.stack([image_1, image_2], axis=0)
-    flattened_images = joined_images.reshape(-1).astype(np.int32)
+    joined_images = np.vstack([image_1, image_2]).astype(np.int32)
 
-    joined_images = joined_images.reshape((height * 2, width))
+    joined_images = joined_images.reshape(-1)
+
 
     img_gpu = cuda.mem_alloc(joined_images.nbytes)
     cuda.memcpy_htod(img_gpu, joined_images)
