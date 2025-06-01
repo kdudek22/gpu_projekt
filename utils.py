@@ -138,6 +138,8 @@ def create_visualization_lines(image, camera: Camera, threshold=10, ray_length=1
             dx = (x - cx) / fx
             dy = (y - cy) / fy
             dz = 1.0
+
+            print(f"{dx}, {dy}, {dz}")
             dir_cam = np.array([dx, -dy, dz])
             dir_cam /= np.linalg.norm(dir_cam)
 
