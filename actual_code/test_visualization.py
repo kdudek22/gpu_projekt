@@ -30,8 +30,13 @@ class MatrixAnimatorVoxels:
             return
 
         # Map normalized voxel values to colors
+        vmin = matrix_3d[mask].min()
+        vmax = matrix_3d[mask].max()
+
+        # Normalize to colormap range
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         colors = np.zeros((*matrix_3d.shape, 4))  # RGBA array
-        colors[mask] = self.colormap(matrix_3d[mask])
+        colors[mask] = self.colormap(norm(matrix_3d[mask]))
 
         # Plot voxels with facecolors
         self.ax.voxels(mask, facecolors=colors, edgecolor='k')
@@ -49,10 +54,13 @@ class MatrixAnimatorVoxels:
 
         # Add or update colorbar only once
         if self.colorbar is None:
-            sm = cm.ScalarMappable(cmap=self.colormap)
-            sm.set_array([])
+            sm = cm.ScalarMappable(cmap=self.colormap, norm=norm)
+            sm.set_array([])  # Can also use matrix_3d[mask]
             self.colorbar = self.fig.colorbar(sm, ax=self.ax, pad=0.1)
             self.colorbar.set_label('Voxel Value')
+        else:
+            self.colorbar.mappable.set_norm(norm)
+            self.colorbar.update_normal(self.colorbar.mappable)
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
