@@ -3,7 +3,7 @@ import pycuda.autoinit  # if you dont import this it breaks :)
 from pycuda.compiler import SourceModule
 import numpy as np
 import cv2
-from test_visualization import MatrixAnimatorVoxels
+from test_visualization import MatrixAnimatorVoxels, visualize_voxel_space
 
 
 with open("kernel.cu", "r") as f:
@@ -57,13 +57,17 @@ def get_voxel_space_from_images(image_1, image_2, camera_data_1, camera_data_2):
 
 
 if __name__ == "__main__":
-    visualization = MatrixAnimatorVoxels()
+    # visualization = MatrixAnimatorVoxels()
 
-    camera_1_data = [1000, 1, 150, 0, -65, 0, 60]
-    camera_2_data = [0, 1, 0, 0, 60, 0, 60]
+    camera_1_data = [1000, 1, 1, 0, -45, 0, 60]
+    camera_2_data = [0, 1, 0, 0, 45, 0, 60]
 
-    cap_1 = cv2.VideoCapture("../recordings/5/cam_1.mp4")
-    cap_2 = cv2.VideoCapture("../recordings/5/cam_2.mp4")
+    # img_1 = cv2.imread("../recordings/5/frame_diffs/cam_1/image_009.png", cv2.IMREAD_GRAYSCALE)
+    # img_2 = cv2.imread("../recordings/5/frame_diffs/cam_2/image_009.png", cv2.IMREAD_GRAYSCALE)
+
+    #
+    cap_1 = cv2.VideoCapture("../recordings/6/cam_1.mp4")
+    cap_2 = cv2.VideoCapture("../recordings/6/cam_2.mp4")
 
     ret_1, prev_1 = cap_1.read()
     ret_2, prev_2 = cap_2.read()
@@ -95,7 +99,8 @@ if __name__ == "__main__":
 
         # result = result > 1
 
-        visualization.update(result, threshold=1, index=frame)
+        visualize_voxel_space(result)
+        # visualization.update(result, threshold=1, index=frame)
         frame += 1
 
     cap_1.release()
