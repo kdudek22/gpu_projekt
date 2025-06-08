@@ -69,21 +69,21 @@ extern "C" __global__ void process_image(int* img, int width, int height, int * 
     float u = (x + 0.5) / width;
     float v = (y + 0.5) / height;
 
-    float cameraSpaceX = (2 * u - 1) * aspectRatio * tanHalfFov;
-    float cameraSpaceY = (1 - 2 * v) * tanHalfFov;
-    float cameraSpaceZ = 1.0f;
+    float localPixelVectorX = (2 * u - 1) * aspectRatio * tanHalfFov;
+    float localPixelVectorY = (1 - 2 * v) * tanHalfFov;
+    float localPixelVectorZ = 1.0f;
 
     Matrix3x3 rotMatrix = getRotationMatrixYXZ(cameraRotRadX, cameraRotRadY, cameraRotRadZ);
 
-    float rayDirectionX = cameraSpaceX * rotMatrix.m[0][0] + cameraSpaceY * rotMatrix.m[0][1] + cameraSpaceZ * rotMatrix.m[0][2];
-    float rayDirectionY = cameraSpaceX * rotMatrix.m[1][0] + cameraSpaceY * rotMatrix.m[1][1] + cameraSpaceZ * rotMatrix.m[1][2];
-    float rayDirectionZ = cameraSpaceX * rotMatrix.m[2][0] + cameraSpaceY * rotMatrix.m[2][1] + cameraSpaceZ * rotMatrix.m[2][2];
+    float globalPixelVectorX = localPixelVectorX * rotMatrix.m[0][0] + localPixelVectorY * rotMatrix.m[0][1] + localPixelVectorZ * rotMatrix.m[0][2];
+    float globalPixelVectorY = localPixelVectorX * rotMatrix.m[1][0] + localPixelVectorY * rotMatrix.m[1][1] + localPixelVectorZ * rotMatrix.m[1][2];
+    float globalPixelVectorZ = localPixelVectorX * rotMatrix.m[2][0] + localPixelVectorY * rotMatrix.m[2][1] + localPixelVectorZ * rotMatrix.m[2][2];
 
-    float length = rsqrtf(rayDirectionX * rayDirectionX + rayDirectionY * rayDirectionY + rayDirectionZ * rayDirectionZ);
+    float invLength = rsqrtf(globalPixelVectorX * globalPixelVectorX + globalPixelVectorY * globalPixelVectorY + globalPixelVectorZ * globalPixelVectorZ);
 
-    float normalizedDX = rayDirectionX * length;
-    float normalizedDY = rayDirectionY * length;
-    float normalizedDZ = rayDirectionZ * length;
+    float normalizedGlobalPixelVectorX = globalPixelVectorX * invLength;
+    float normalizedGlobalPixelVectorY = globalPixelVectorY * invLength;
+    float normalizedGlobalPixelVectorZ = globalPixelVectorZ * invLength;
 
     float ox = (float) cameraPosX;
     float oy = (float) cameraPosY;
@@ -92,12 +92,12 @@ extern "C" __global__ void process_image(int* img, int width, int height, int * 
     float t = 0.0f;
     float tMax = 1000.0f;
 
-    float step = 1.0f;
+    float step = voxelSpaceUnit;
 
     while (t < tMax){
-        float px = ox + normalizedDX * t;
-        float py = oy + normalizedDY * t;
-        float pz = oz + normalizedDZ * t;
+        float px = ox + normalizedGlobalPixelVectorX * t;
+        float py = oy + normalizedGlobalPixelVectorY * t;
+        float pz = oz + normalizedGlobalPixelVectorZ * t;
 
         int ix = (int) (px / voxelSpaceUnit);
         int iy = (int) (py / voxelSpaceUnit);
