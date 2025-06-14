@@ -54,10 +54,10 @@ extern "C" __global__ void process_image(int* img, int width, int height, int * 
     int cameraFov = cameraData[6 + image_index * 7];
 
     // ***** ACTUAL OPERATIONS START HERE *****
-    int pixelIndex = width * height * image_index + y * width + x;
+    int imageIndex = width * height * image_index + y * width + x;
 
     // If the value of the pixel is smaller than the threshold, do nothing :)
-    if(img[pixelIndex] < 10 || x >= width || y >= height){
+    if(img[imageIndex] < 100 || x >= width || y >= height){
         return;
     }
 
