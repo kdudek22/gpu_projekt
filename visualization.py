@@ -1,10 +1,12 @@
 import os
-
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d import Axes3D
+import pickle
 
 
 def visualize_voxels_plt(voxel_data: list[list[list]]):
@@ -14,7 +16,7 @@ def visualize_voxels_plt(voxel_data: list[list[list]]):
     ax.voxels(data, facecolors='red', edgecolor='k')
     plt.show()
 
-def animate_voxels_plt(voxel_sequence: list[list[list[list]]], interval=500):
+def animate_voxels_plt(voxel_sequence: list[list[list[list]]], interval=0.03):
     voxel_sequence = [np.array(frame) for frame in voxel_sequence]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -83,7 +85,11 @@ def animate_voxels_pv(voxel_sequence, filepath="animation.gif", interval=0.3):
 
     plotter.close()
 
+
 if __name__ == "__main__":
+    with open('actual_code/res_arr.pkl', 'rb') as f:
+        loaded_array = pickle.load(f)
+
     frame = random_frame(shape=(100, 100, 100), percent_of_ones=0.01)
 
     sequence = [
@@ -99,4 +105,4 @@ if __name__ == "__main__":
     folder_path = os.path.join(os.getcwd(), "animations")
     animations_count = len([f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))])
 
-    animate_voxels_pv(sequence, f"animations\\animation{animations_count}.gif")
+    animate_voxels_plt(loaded_array)
