@@ -57,7 +57,7 @@ extern "C" __global__ void process_image(int* img, int width, int height, int * 
     int imageIndex = width * height * image_index + y * width + x;
 
     // If the value of the pixel is smaller than the threshold, do nothing :)
-    if(img[imageIndex] < 10 || x >= width || y >= height){
+    if(img[imageIndex] < 100 || x >= width || y >= height){
         return;
     }
 
