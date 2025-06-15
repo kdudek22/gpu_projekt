@@ -38,30 +38,31 @@ __device__ int getVoxelSpaceCoordinatesToIndex(int x, int y, int z, int voxelSpa
 
 
 extern "C" __global__ void process_image(int* img, int width, int height, int * cameraData, int *voxelSpace, int voxelSpaceDimX, int voxelSpaceDimY, int voxelSpaceDimZ, int voxelSpaceUnit) {
+    // coordinates of the pixel the thread is handling
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int image_index = blockIdx.z;
+    int imageIndex = blockIdx.z;
 
-    int cameraPosX = cameraData[image_index * 7];
-    int cameraPosY = cameraData[1 + image_index * 7];
-    int cameraPosZ = cameraData[2 + image_index * 7];
+    int cameraPosX = cameraData[imageIndex * 7];
+    int cameraPosY = cameraData[1 + imageIndex * 7];
+    int cameraPosZ = cameraData[2 + imageIndex * 7];
 
-    float cameraRotRadX = (float)cameraData[3 + image_index * 7] * (CUDART_PI_F / 180.0f);
-    float cameraRotRadY = (float)cameraData[4 + image_index * 7] * (CUDART_PI_F / 180.0f);
-    float cameraRotRadZ = (float)cameraData[5 + image_index * 7] * (CUDART_PI_F / 180.0f);
+    float cameraRotRadX = (float)cameraData[3 + imageIndex * 7] * (CUDART_PI_F / 180.0f);
+    float cameraRotRadY = (float)cameraData[4 + imageIndex * 7] * (CUDART_PI_F / 180.0f);
+    float cameraRotRadZ = (float)cameraData[5 + imageIndex * 7] * (CUDART_PI_F / 180.0f);
 
-    int cameraFov = cameraData[6 + image_index * 7];
+    int cameraFov = cameraData[6 + imageIndex * 7];
 
     // ***** ACTUAL OPERATIONS START HERE *****
-    int imageIndex = width * height * image_index + y * width + x;
+    int pixelIndex = width * height * imageIndex + y * width + x;
 
-    // If the value of the pixel is smaller than the threshold, do nothing :)
-    if(img[imageIndex] < 100 || x >= width || y >= height){
+    // If the value of the pixel is smaller than the threshold, we skip it
+    if(img[pixelIndex] < 100 || x >= width || y >= height){
         return;
     }
 
-    // %%%%% LOGIC %%%%%
+    // %%%%% LOGIC STARTS HERE %%%%%
     float aspectRatio = (float) width / height;
     float fovRad = ((float) cameraFov) * (CUDART_PI_F / 180.0f);
     float tanHalfFov = tanf(fovRad / 2.0f);
@@ -90,10 +91,11 @@ extern "C" __global__ void process_image(int* img, int width, int height, int * 
     float oz = (float) cameraPosZ;
 
     float t = 0.0f;
-    float tMax = 1000.0f;
+    float tMax = 1000.0f; // this should be tied to the voxelSpaceDimensions and possibly the voxelSpaceUnit
 
     float step = voxelSpaceUnit;
 
+    // move along the vector in global space and update the values at corresponding coordinates in the VoxelSpace
     while (t < tMax){
         float px = ox + normalizedGlobalPixelVectorX * t;
         float py = oy + normalizedGlobalPixelVectorY * t;
