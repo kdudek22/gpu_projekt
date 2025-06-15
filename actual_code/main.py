@@ -1,9 +1,8 @@
 import numpy as np
 import cv2
-import time
 from flask import Flask, jsonify, request
 import threading
-import matplotlib.pyplot as plt
+import json
 
 
 app = Flask(__name__)
@@ -14,7 +13,15 @@ def resize_image(image, amount: float):
     return cv2.resize(image, (int(image.shape[1] * amount), int(image.shape[0] * amount)))
 
 
-def run_cuda():
+def get_camera_data(file_path: str) -> list[int]:
+    with open(file_path, "r") as f:
+        content = json.load(f)
+
+    return [value for cam in content.values() for value in cam.values()]
+
+
+def run_cuda(num_cameras: int):
+    print("Running Setup")
     # this is the way this has to be done, as we have to set up cuda in the same thread the kernel invocation is done
     import pycuda.driver as cuda
     import pycuda.autoinit  # if you dont import this it breaks :)
@@ -26,7 +33,17 @@ def run_cuda():
     mod = SourceModule(kernel_code)
     process_image = mod.get_function("process_image")
 
+    i = 0
+
     def get_voxel_space_from_images(images: list[np.array], camera_data: list[int]):
+        nonlocal i
+        i += 1
+
+        if(i == 100):
+            x  = 123
+
+        print(i)
+
         # all images must have the same dimensions: width and height
         height, width = images[0].shape
 
@@ -65,49 +82,45 @@ def run_cuda():
         return result
 
     def process_images():
-        camera_1_data = [500, 100, 0, 0, 0, 0, 60]
-        camera_2_data = [500, 100, 1000, 0, 180, 0, 60]
-        camera_3_data = [500, 1000, 500, 90, 0, 0, 60]
+        camera_data = get_camera_data("../recordings/11/locations.json")
 
-        cap_1 = cv2.VideoCapture("../recordings/11/cam_1.mp4")
-        cap_2 = cv2.VideoCapture("../recordings/11/cam_2.mp4")
-        cap_3 = cv2.VideoCapture("../recordings/11/cam_3.mp4")
+        caps = [cv2.VideoCapture(f"../recordings/11/cam_{i + 1}.mp4") for i in range(num_cameras)]
 
-        ret_1, frame_1 = cap_1.read()
-        ret_2, frame_2 = cap_2.read()
-        ret_3, frame_3 = cap_3.read()
+        rets, frames = zip(*[cap.read() for cap in caps])
 
-        if not ret_1 or not ret_2 or not ret_3:
+        if not all(rets):
             exit(-1)
 
         while True:
-            ret_1, frame_1 = cap_1.read()
-            ret_2, frame_2 = cap_2.read()
-            ret_3, frame_3 = cap_3.read()
+            rets, frames = zip(*[cap.read() for cap in caps])
 
-            if not ret_1 or not ret_2 or not ret_3:
-                break
+            if not all(rets):
+                return
 
-            frame_1 = cv2.cvtColor(frame_1, cv2.COLOR_BGR2GRAY)
-            frame_2 = cv2.cvtColor(frame_2, cv2.COLOR_BGR2GRAY)
-            frame_3 = cv2.cvtColor(frame_3, cv2.COLOR_BGR2GRAY)
+            frames = [cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) for frame in frames]
 
             global result
-            result = get_voxel_space_from_images([frame_1, frame_2, frame_3], camera_1_data + camera_2_data + camera_3_data)
+            result = get_voxel_space_from_images(frames, camera_data)
 
-            cv2.imshow("cam_1", resize_image(frame_1, 0.5))
-            cv2.imshow("cam_2", resize_image(frame_2, 0.5))
-            cv2.imshow("cam_3", resize_image(frame_3, 0.5))
+            # displaying the video in real time as the algorith is running
+            for i, frame in enumerate(frames):
+                cv2.namedWindow(f'cam_{i + 1}', cv2.WINDOW_NORMAL)
+                cv2.imshow(f"cam_{i + 1}", resize_image(frame, 0.5))
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                return -1
 
-        cap_1.release()
-        cap_2.release()
-        cap_3.release()
+        for cap in caps:
+            cap.release()
+
+        cv2.destroyAllWindows()
 
     while True:
-        process_images()
+        print("Running main loop again...")
+        res = process_images()
+
+        if res == -1:
+            break
 
 
 @app.route("/test")
@@ -127,6 +140,7 @@ def get_voxel_space():
 
 
 if __name__ == "__main__":
-    t = threading.Thread(target=run_cuda)
+    # run_cuda(4)
+    t = threading.Thread(target=run_cuda, args=(4,))
     t.start()
     app.run(debug=True, use_reloader=False)
