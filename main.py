@@ -73,7 +73,7 @@ def run_cuda(num_cameras: int):
         return result
 
     def process_images():
-        camera_data = get_camera_data("../recordings/11/locations.json")
+        camera_data = get_camera_data("recordings/11/locations.json")
 
         caps = [cv2.VideoCapture(f"../recordings/11/cam_{i + 1}.mp4") for i in range(num_cameras)]
 
