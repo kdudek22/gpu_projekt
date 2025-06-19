@@ -33,17 +33,8 @@ def run_cuda(num_cameras: int):
     mod = SourceModule(kernel_code)
     process_image = mod.get_function("process_image")
 
-    i = 0
 
     def get_voxel_space_from_images(images: list[np.array], camera_data: list[int]):
-        nonlocal i
-        i += 1
-
-        if(i == 100):
-            x  = 123
-
-        print(i)
-
         # all images must have the same dimensions: width and height
         height, width = images[0].shape
 
@@ -123,13 +114,9 @@ def run_cuda(num_cameras: int):
             break
 
 
-@app.route("/test")
-def test_view():
-    return "test works :)"
-
-
 @app.route("/voxel_space")
 def get_voxel_space():
+    """This is used for in the unity visualization - it gets polled based on time intervals"""
     threshold = int(request.args.get("threshold", 0))
     x, y, z = np.where(result > threshold)
     values = result[x, y, z]
@@ -140,7 +127,6 @@ def get_voxel_space():
 
 
 if __name__ == "__main__":
-    # run_cuda(4)
     t = threading.Thread(target=run_cuda, args=(4,))
     t.start()
     app.run(debug=True, use_reloader=False)
